@@ -143,6 +143,7 @@ function el(n,a={},ch=[]){
 const selectedShapes=new Set();
 
 function render(){
+  const FONT_STACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif';
   const root=document.getElementById("root").value;
   const mode=document.getElementById("mode").value;
   const startDegree=parseInt(document.getElementById("startDegree").value,10)||1;
@@ -165,6 +166,11 @@ function render(){
   const height=padT+STRINGS*ch+padB;
 
   const svg=el("svg",{width,height,viewBox:`0 0 ${width} ${height}`});
+
+  const styleNode = el('style', {}, []);
+  styleNode.textContent = `text{ font-family:${FONT_STACK}; }`;
+  svg.appendChild(styleNode);
+
   svg.append(el("rect",{x:0,y:0,width,height,fill:"#0b1220"}));
   const g=el("g",{transform:`translate(${padL},${padT})`}); svg.append(g);
 
@@ -182,11 +188,14 @@ function render(){
   const roots=lowERootFrets(startRoot).filter(v=>v>=fmin && v<=fmax).sort((a,b)=>a-b);
   const startFrets=(octaves===1)?roots.slice(0,1):roots;
   for(const start of startFrets){
-    for(let s=0; s<STRINGS; s++){
+    var startFret = start;
+    for(let s=STRINGS-1; s>=0; s--){
       let count=0;
-      for(let f=start; f<=fmax; f++){
+      for(let f=startFret; f<=fmax; f++){
+        console.log("startFret:",startFret,"string:",noteAtVisual(s,0),s,"note:",f,noteAtVisual(s,f),scale.includes(noteAtVisual(s,f)),count);
         if(count>=3) break;
         if(scale.includes(noteAtVisual(s,f))){
+            if(count===0) startFret=f; // ilk notada başlangıç perdesini güncelle
           const x=(f-fmin)*cw, y=s*ch;
           g.append(el("rect",{x,y,width:cw,height:ch,fill:colors[startRoot],"fill-opacity":0.42,rx:4,ry:4}));
           count++;
@@ -271,7 +280,8 @@ function downloadSVG(){
   const svg=document.querySelector("#stage svg"); if(!svg) return;
   const s=new XMLSerializer().serializeToString(svg);
   const a=document.createElement("a"); a.href="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
-  a.download="fretboard.svg"; a.click();
+  const fileName = document.getElementById("root").value + "_" + document.getElementById("mode").value + "_Fretboard-3NPS.svg";
+  a.download=fileName; a.click();
 }
 function downloadPNG(){
   const svg=document.querySelector("#stage svg"); if(!svg) return;
@@ -283,7 +293,8 @@ function downloadPNG(){
     const ctx=c.getContext("2d"); ctx.scale(2,2);
     ctx.fillStyle="#0b1220"; ctx.fillRect(0,0,img.width,img.height); ctx.drawImage(img,0,0);
     URL.revokeObjectURL(url);
-    c.toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="fretboard.png"; a.click(); }, "image/png");
+    const fileName = document.getElementById("root").value + "_" + document.getElementById("mode").value + "_Fretboard-3NPS.png";
+    c.toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=fileName; a.click(); }, "image/png");
   };
   img.src=url;
 }
