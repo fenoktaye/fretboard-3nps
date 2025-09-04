@@ -12,11 +12,17 @@
   .grid { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:12px;  }
   @media(min-width:992px){ .grid { grid-template-columns: repeat(3, minmax(220px, 1fr)); } }
   @media(min-width:1280px){  .container{ max-width:1200px; margin:auto; padding:20px}} 
-  label { font-size:13px; display:block; }
+  label { font-size:13px; display:block;}
   .stack { display:flex; flex-direction:column; gap:6px; }
   select, input[type="number"], input[type="text"] {
     width:100%; padding:8px 10px; border-radius:8px; border:1px solid #1f2937;
     background:#0b1220; color:#fff; outline:none;
+  }
+  select{ appearance: none;}
+  .select-dropdown { position:relative; } 
+  .select-dropdown:after { 
+    content: "▾"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    pointer-events: none; color: #9ca3af; font-size: 12px;
   }
   .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   .btn { padding:8px 12px; border-radius:8px; cursor:pointer; border:none; background:#1f2937; color:#e5e7eb; }
@@ -36,33 +42,39 @@
   <div class="grid">
     <div class="stack">
       <label>Kök (Root):
-        <select id="root">
-          <option>C</option><option>C#</option><option>D</option><option>D#</option>
-          <option>E</option><option>F</option><option>F#</option><option>G</option>
-          <option>G#</option><option>A</option><option>A#</option><option>B</option>
-        </select>
+        <div class="select-dropdown">
+          <select id="root">
+            <option>C</option><option>C#</option><option>D</option><option>D#</option>
+            <option>E</option><option>F</option><option>F#</option><option>G</option>
+            <option>G#</option><option>A</option><option>A#</option><option>B</option>
+          </select>
+        </div>
       </label>
       <label>Mod:
-        <select id="mode">
-          <option>Ionian</option>
-          <option>Dorian</option>
-          <option>Phrygian</option>
-          <option>Lydian</option>
-          <option>Mixolydian</option>
-          <option>Aeolian</option>
-          <option>Locrian</option>
-        </select>
+        <div class="select-dropdown">
+          <select id="mode">
+            <option>Ionian</option>
+            <option>Dorian</option>
+            <option>Phrygian</option>
+            <option>Lydian</option>
+            <option>Mixolydian</option>
+            <option>Aeolian</option>
+            <option>Locrian</option>
+          </select>
+        </div>
       </label>
       <label>3NPS Başlangıç Derecesi:
-        <select id="startDegree">
-          <option value="1" selected>1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-        </select>
+        <div class="select-dropdown">
+          <select id="startDegree">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+          </select>
+        </div>
       </label>
     </div>
 
@@ -74,17 +86,21 @@
         <input id="fretMax" type="number" min="0" max="24" value="24"/>
       </label>
       <label>Oktav Tekrarı (Mod highlight):
-        <select id="octaves">
-          <option value="2" selected>2 (12. perde tekrarı dahil)</option>
-          <option value="1">1 (sadece ilk kök)</option>
-        </select>
+        <div class="select-dropdown">
+          <select id="octaves">
+            <option value="2" selected>2 (12. perde tekrarı dahil)</option>
+            <option value="1">1 (sadece ilk kök)</option>
+          </select>
+        </div>
       </label>
     </div>
 
     <div class="stack">
       <label>Yazı Boyutu: <input id="fontSize" type="number" value="9"/></label>
       <label>Yazı Kalınlığı:
-        <select id="fontWeight"><option>normal</option><option selected>bold</option></select>
+        <div class="select-dropdown">
+          <select id="fontWeight"><option>normal</option><option selected>bold</option></select>
+        </div>
       </label>
       <label>Yazı Rengi: <input id="fontColor" type="text" value="#ffffff"/></label>
     </div>
