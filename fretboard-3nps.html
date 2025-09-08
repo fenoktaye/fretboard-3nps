@@ -1,6 +1,127 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fretboard 3NPS</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0f172a;
+      color: #e5e7eb;
+      font-family: sans-serif;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      background: #111827;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    @media(min-width:992px) {
+      .grid {
+        grid-template-columns: repeat(3, minmax(220px, 1fr));
+      }
+    }
+
+    @media(min-width:1280px) {
+      .container {
+        max-width: 1200px;
+        margin: auto;
+        padding: 20px
+      }
+    }
+
+    label {
+      font-size: 13px;
+      display: block;
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    select,
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      background: #0b1220;
+      color: #fff;
+      outline: none;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      background: #1f2937;
+      color: #e5e7eb;
+    }
+
+    .btn:hover {
+      background: #111827;
+    }
+
+    .btn.primary {
+      background: #22c55e;
+      color: #052e16;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border: 1px solid #374151;
+      border-radius: 999px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip.active {
+      background: #334155;
+    }
+
+    #stage {
+      background: #0b1220;
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    #stage svg {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: auto;
+    }
+  </style>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Fretboard 3NPS</title>
@@ -34,9 +155,10 @@
   #stage svg { max-width:100%; height:auto; display:block; margin:auto; }
 </style>
 </head>
+
 <body>
-    <div class="container">
-<h1>Fretboard 3NPS</h1>
+  <div class="container">
+    <h1>Fretboard 3NPS</h1>
 
 <div class="controls">
   <div class="grid">
@@ -76,6 +198,14 @@
           </select>
         </div>
       </label>
+      <label>Arpeggio Dereceleri:
+        <div class="select-dropdown">
+          <select id="arpeggioDegrees">
+            <option value="0" selected>Gösterme</option>
+            <option value="1">1,3,5</option>
+            <option value="2">1,3,5,7</option>
+          </select>
+        </div>
     </div>
 
     <div class="stack">
@@ -107,219 +237,267 @@
 
   </div>
 
-  <div class="row" style="margin-top:10px">
-    <button class="btn primary" onclick="render()">Görselleştir</button>
-    <button class="btn" onclick="downloadSVG()">SVG İndir</button>
-    <button class="btn" onclick="downloadPNG()">PNG İndir</button>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" onclick="render()">Görselleştir</button>
+        <button class="btn" onclick="downloadSVG()">SVG İndir</button>
+        <button class="btn" onclick="downloadPNG()">PNG İndir</button>
+      </div>
+    </div>
+
+    <div id="stage"></div>
   </div>
-</div>
+  <script>
+    const STRINGS = 6, FRETS = 24;
+    const TUNING_LOW_TO_HIGH = ["E", "A", "D", "G", "B", "E"];
+    const TUNING_VISUAL = [...TUNING_LOW_TO_HIGH].reverse();
+    const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const INTERVALS = {
+      Ionian: [2, 2, 1, 2, 2, 2, 1],
+      Dorian: [2, 1, 2, 2, 2, 1, 2],
+      Phrygian: [1, 2, 2, 2, 1, 2, 2],
+      Lydian: [2, 2, 2, 1, 2, 2, 1],
+      Mixolydian: [2, 2, 1, 2, 2, 1, 2],
+      Aeolian: [2, 1, 2, 2, 1, 2, 2],
+      Locrian: [1, 2, 2, 1, 2, 2, 2]
+    };
+    const MODE_ORDER = ["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"];
+    // derece 1–7 paleti (renkler dereceye göre; highlight rengi kök notanın rengi olur)
+    const DEGREE_COLORS = ["#e11d48", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#92400e"];
 
-<div id="stage"></div>
-</div>
-<script>
-const STRINGS=6, FRETS=24;
-const TUNING_LOW_TO_HIGH=["E","A","D","G","B","E"];
-const TUNING_VISUAL=[...TUNING_LOW_TO_HIGH].reverse();
-const NOTES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-const INTERVALS={
-  Ionian:[2,2,1,2,2,2,1],
-  Dorian:[2,1,2,2,2,1,2],
-  Phrygian:[1,2,2,2,1,2,2],
-  Lydian:[2,2,2,1,2,2,1],
-  Mixolydian:[2,2,1,2,2,1,2],
-  Aeolian:[2,1,2,2,1,2,2],
-  Locrian:[1,2,2,1,2,2,2]
-};
-const MODE_ORDER=["Ionian","Dorian","Phrygian","Lydian","Mixolydian","Aeolian","Locrian"];
-// derece 1–7 paleti (renkler dereceye göre; highlight rengi kök notanın rengi olur)
-const DEGREE_COLORS=["#e11d48","#f97316","#eab308","#22c55e","#3b82f6","#a855f7","#92400e"];
+    function noteAtVisualDegree(s, f) {
+        const root = document.getElementById("root").value;
+        const mode = document.getElementById("mode").value;
+        const scale = buildScale(root, INTERVALS[mode]);
+        const degree = scale.indexOf(noteAtVisual(s, f));
+        return degree === -1 ? "" : (degree + 1).toString();
+    }
+    function noteAtVisual(s, f) {
+      const li = STRINGS - 1 - s;
+      const on = TUNING_LOW_TO_HIGH[li];
+      return NOTES[(NOTES.indexOf(on) + f) % 12];
+    }
+   
+    function buildScale(root, pattern) {
+      let i = NOTES.indexOf(root); const out = [root];
+      for (const st of pattern) { i = (i + st) % 12; out.push(NOTES[i]); }
+      out.pop(); return out;
+    }
+    function degreeColorsForScale(scale) { return Object.fromEntries(scale.map((n, i) => [n, DEGREE_COLORS[i]])); }
+    function lowERootFrets(rootNote) {
+      const res = []; const sLowE = 5;
+      for (let f = 0; f <= FRETS; f++) { if (noteAtVisual(sLowE, f) === rootNote) res.push(f); }
+      return res;
+    }
+    function el(n, a = {}, ch = []) {
+      const e = document.createElementNS("http://www.w3.org/2000/svg", n);
+      for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+      for (const c of ch) e.appendChild(c);
+      return e;
+    }
 
-function noteAtVisual(s,f){
-  const li=STRINGS-1-s; const on=TUNING_LOW_TO_HIGH[li];
-  return NOTES[(NOTES.indexOf(on)+f)%12];
-}
-function buildScale(root, pattern){
-  let i=NOTES.indexOf(root); const out=[root];
-  for(const st of pattern){ i=(i+st)%12; out.push(NOTES[i]); }
-  out.pop(); return out;
-}
-function degreeColorsForScale(scale){ return Object.fromEntries(scale.map((n,i)=>[n,DEGREE_COLORS[i]])); }
-function lowERootFrets(rootNote){
-  const res=[]; const sLowE=5;
-  for(let f=0; f<=FRETS; f++){ if(noteAtVisual(sLowE,f)===rootNote) res.push(f); }
-  return res;
-}
-function el(n,a={},ch=[]){
-  const e=document.createElementNS("http://www.w3.org/2000/svg",n);
-  for(const [k,v] of Object.entries(a)) e.setAttribute(k,v);
-  for(const c of ch) e.appendChild(c);
-  return e;
-}
+    const selectedShapes = new Set();
 
-const selectedShapes=new Set();
+    function render() {
+      const FONT_STACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif';
+      const root = document.getElementById("root").value;
+      const mode = document.getElementById("mode").value;
+      const startDegree = parseInt(document.getElementById("startDegree").value, 10) || 1;
 
-function render(){
-  const FONT_STACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif';
-  const root=document.getElementById("root").value;
-  const mode=document.getElementById("mode").value;
-  const startDegree=parseInt(document.getElementById("startDegree").value,10)||1;
+      const fmin = Math.max(0, Math.min(24, +document.getElementById("fretMin").value || 0));
+      const fmax = Math.max(fmin, Math.min(24, +document.getElementById("fretMax").value || 24));
+      const octaves = +document.getElementById("octaves").value || 2;
 
-  const fmin=Math.max(0, Math.min(24, +document.getElementById("fretMin").value||0));
-  const fmax=Math.max(fmin, Math.min(24, +document.getElementById("fretMax").value||24));
-  const octaves=+document.getElementById("octaves").value||2;
+      const scale = buildScale(root, INTERVALS[mode]);          // seçilen modun 7 notası
+      const colors = degreeColorsForScale(scale);               // her nota için renk (dereceye göre)
+      const startRoot = scale[(startDegree - 1 + 7) % 7];             // 3NPS highlight kökü (kaydırılmış başlangıç)
 
-  const scale=buildScale(root, INTERVALS[mode]);          // seçilen modun 7 notası
-  const colors=degreeColorsForScale(scale);               // her nota için renk (dereceye göre)
-  const startRoot=scale[(startDegree-1+7)%7];             // 3NPS highlight kökü (kaydırılmış başlangıç)
+      const fs = +document.getElementById("fontSize").value || 9;
+      const fw = document.getElementById("fontWeight").value || "bold";
+      const fc = document.getElementById("fontColor").value || "#ffffff";
 
-  const fs=+document.getElementById("fontSize").value||9;
-  const fw=document.getElementById("fontWeight").value||"bold";
-  const fc=document.getElementById("fontColor").value||"#ffffff";
+      // layout
+      const cw = 40, ch = 26, padL = 50, padT = 36, padR = 260, padB = 52;
+      const width = padL + (fmax - fmin + 1) * cw + padR;
+      const height = padT + STRINGS * ch + padB;
 
-  // layout
-  const cw=40, ch=26, padL=50, padT=36, padR=260, padB=52;
-  const width=padL+(fmax-fmin+1)*cw+padR;
-  const height=padT+STRINGS*ch+padB;
+      const svg = el("svg", { width, height, viewBox: `0 0 ${width} ${height}` });
 
-  const svg=el("svg",{width,height,viewBox:`0 0 ${width} ${height}`});
+      const styleNode = el('style', {}, []);
+      styleNode.textContent = `text{ font-family:${FONT_STACK}; }`;
+      svg.appendChild(styleNode);
 
-  const styleNode = el('style', {}, []);
-  styleNode.textContent = `text{ font-family:${FONT_STACK}; }`;
-  svg.appendChild(styleNode);
+      svg.append(el("rect", { x: 0, y: 0, width, height, fill: "#0b1220" }));
+      const g = el("g", { transform: `translate(${padL},${padT})` }); svg.append(g);
 
-  svg.append(el("rect",{x:0,y:0,width,height,fill:"#0b1220"}));
-  const g=el("g",{transform:`translate(${padL},${padT})`}); svg.append(g);
+      // grid
+      for (let s = 0; s < STRINGS; s++) {
+        g.append(el("line", { x1: 0, y1: s * ch, x2: (fmax - fmin + 1) * cw, y2: s * ch, stroke: "#1f2937" }));
+      }
+      for (let f = fmin; f <= fmax; f++) {
+        const x = (f - fmin) * cw;
+        g.append(el("line", { x1: x, y1: 0, x2: x, y2: STRINGS * ch, stroke: "#1f2937" }));
+      }
+      g.append(el("rect", { x: 0, y: 0, width: (fmax - fmin + 1) * cw, height: STRINGS * ch, fill: "none", stroke: "#334155", "stroke-width": "1.2", rx: 10, ry: 10 }));
 
-  // grid
-  for(let s=0;s<STRINGS;s++){
-    g.append(el("line",{x1:0,y1:s*ch,x2:(fmax-fmin+1)*cw,y2:s*ch,stroke:"#1f2937"}));
-  }
-  for(let f=fmin;f<=fmax;f++){
-    const x=(f-fmin)*cw;
-    g.append(el("line",{x1:x,y1:0,x2:x,y2:STRINGS*ch,stroke:"#1f2937"}));
-  }
-  g.append(el("rect",{x:0,y:0,width:(fmax-fmin+1)*cw,height:STRINGS*ch,fill:"none",stroke:"#334155","stroke-width":"1.2",rx:10,ry:10}));
-
-  // 3NPS highlight (renk = startRoot'un rengi → kök sese göre)
-  const roots=lowERootFrets(startRoot).filter(v=>v>=fmin && v<=fmax).sort((a,b)=>a-b);
-  const startFrets=(octaves===1)?roots.slice(0,1):roots;
-  for(const start of startFrets){
-    var startFret = start;
-    for(let s=STRINGS-1; s>=0; s--){
-      let count=0;
-      for(let f=startFret; f<=fmax; f++){
-        console.log("startFret:",startFret,"string:",noteAtVisual(s,0),s,"note:",f,noteAtVisual(s,f),scale.includes(noteAtVisual(s,f)),count);
-        if(count>=3) break;
-        if(scale.includes(noteAtVisual(s,f))){
-            if(count===0) startFret=f; // ilk notada başlangıç perdesini güncelle
-          const x=(f-fmin)*cw, y=s*ch;
-          g.append(el("rect",{x,y,width:cw,height:ch,fill:colors[startRoot],"fill-opacity":0.42,rx:4,ry:4}));
-          count++;
+      // 3NPS highlight (renk = startRoot'un rengi → kök sese göre)
+      const roots = lowERootFrets(startRoot).filter(v => v >= fmin && v <= fmax).sort((a, b) => a - b);
+      const startFrets = (octaves === 1) ? roots.slice(0, 1) : roots;
+      for (const start of startFrets) {
+        var startFret = start;
+        let lastNoteOnString = "";
+        for (let s = STRINGS - 1; s >= 0; s--) {
+          let count = 0;
+          
+          for (let f = startFret; f <= fmax; f++) {
+            if (count >= 3) break;
+            if (scale.includes(noteAtVisual(s, f))) {
+              if (count === 0){
+                console.log("--- ilk notaya gelindi:", s, f, noteAtVisual(s, f));
+                console.log("--- önceki başlangıç:", startFret);
+                console.log("--- önceki son nota:", lastNoteOnString);
+                startFret = f; // ilk notada başlangıç perdesini güncelle
+                let currentNote = noteAtVisual(s, f);
+                if (currentNote === lastNoteOnString) {
+                  // aynı notadaysak atla
+                  continue;
+                }
+              }
+              const x = (f - fmin) * cw, y = s * ch;
+              g.append(el("rect", { x, y, width: cw, height: ch, fill: colors[startRoot], "fill-opacity": 0.42, rx: 4, ry: 4 }));
+              count++;
+              
+            }
+            lastNoteOnString = count === 3 ? noteAtVisual(s, f) : lastNoteOnString;
+            console.log("sF:", startFret, "-", noteAtVisual(s, 0), s, "n:", f, noteAtVisual(s, f), scale.includes(noteAtVisual(s, f)), count);
+          }
         }
       }
-    }
-  }
 
-  // notes (R=12)
-  const R=12;
-  for(let s=0;s<STRINGS;s++){
-    for(let f=fmin;f<=fmax;f++){
-      const n=noteAtVisual(s,f);
-      if(scale.includes(n)){
-        const cx=(f-fmin+0.5)*cw, cy=(s+0.5)*ch;
-        g.append(el("circle",{cx, cy, r:R, fill:colors[n]}));
-        const t=el("text",{x:cx,y:cy+fs*0.35,"text-anchor":"middle","font-size":fs,"font-weight":fw,fill:fc});
-        t.textContent=n; g.append(t);
+      // notes (R=12)
+      const R = 12;
+      for (let s = 0; s < STRINGS; s++) {
+        for (let f = fmin; f <= fmax; f++) {
+          const n = noteAtVisual(s, f);
+          if (scale.includes(n)) {
+            const cx = (f - fmin + 0.5) * cw, cy = (s + 0.5) * ch;
+            g.append(el("circle", { cx, cy, r: R, fill: colors[n] }));
+            const t = el("text", { x: cx, y: cy + fs * 0.35, "text-anchor": "middle", "font-size": fs, "font-weight": fw, fill: fc });
+            t.textContent = n; 
+            g.append(t);
+          }
+        }
       }
+      // degrees (R=8)
+      const arpeggioOption = +document.getElementById("arpeggioDegrees").value || 0;
+      if (arpeggioOption > 0) {
+        const arpeggioDegrees = [1, 3, 5, 7, 9, 11];
+        const arpeggioSet = new Set(arpeggioDegrees.slice(0, 2 + arpeggioOption)); // 0=1,3,5 | 1=1,3,5,7 | 2=1,3,5,7,9 | 3=1,3,5,7,9,11
+        console.log(">>>> arpeggioSet:", arpeggioSet);
+        const R2 = 8;
+        for (let s = 0; s < STRINGS; s++) {
+          for (let f = fmin; f <= fmax; f++) {
+            const n = noteAtVisual(s, f);
+            if (scale.includes(n)) {
+              const degree = scale.indexOf(n) + 1;
+              if (arpeggioSet.has(degree)) {
+                const cx = (f - fmin + 0.5) * cw - R + 2, cy = (s + 0.5) * ch + R - 2;
+                g.append(el("circle", { cx, cy, r: R2, fill: "#0b1220", stroke: colors[n], "stroke-width": "1.5" }));
+                const t = el("text", { x: cx, y: cy + fs * 0.35 * 0.8, "text-anchor": "middle", "font-size": fs * 0.8, "font-weight": fw, fill: colors[n] });
+                t.textContent = degree; 
+                g.append(t);
+              }
+            }
+          }
+        }
+      }
+
+      // fret numbers (bottom)
+      for (let f = fmin; f <= fmax; f++) {
+        const tx = padL + (f - fmin + 0.5) * cw;
+        var textEl = el("text", { x: tx, y: padT + STRINGS * ch + 16, "text-anchor": "middle", "font-size": 11, fill: "#cbd5e1", "font-weight": "600" });
+        textEl.textContent = f;
+        svg.append(textEl);
+      }
+
+      // inlays under numbers
+      const single = [3, 5, 7, 9, 15, 17, 19, 21], doubles = [12, 24];
+      const inlayY = padT + STRINGS * ch + 30;
+      for (const fret of single) {
+        if (fret < fmin || fret > fmax) continue;
+        const x = padL + (fret - fmin + 0.5) * cw;
+        svg.append(el("circle", { cx: x, cy: inlayY, r: 4, fill: "#94a3b8" }));
+      }
+      for (const fret of doubles) {
+        if (fret < fmin || fret > fmax) continue;
+        const x = padL + (fret - fmin + 0.5) * cw;
+        svg.append(el("circle", { cx: x, cy: inlayY - 7, r: 4, fill: "#cbd5e1" }));
+        svg.append(el("circle", { cx: x, cy: inlayY + 7, r: 4, fill: "#cbd5e1" }));
+      }
+
+      // string labels
+      for (let s = 0; s < STRINGS; s++) {
+        const ty = padT + s * ch + ch * 0.6;
+        var textEl = el("text", { x: padL - 10, y: ty, "text-anchor": "end", "font-size": 12, fill: "#cbd5e1", "font-weight": "600" });
+        textEl.textContent = TUNING_VISUAL[s];
+        svg.append(textEl);
+      }
+
+      // title
+      svg.append(el("text", { x: padL, y: 22, fill: "#e5e7eb", "font-size": 16, "font-weight": "700" }).textContent =
+        `${root} ${mode} — Frets ${fmin}–${fmax} + 3NPS (Start deg ${startDegree})`);
+
+      // LEGEND — seçilen moda göre ilgili mod adlarını göster
+      const legend = el("g", {}); svg.append(legend);
+      const lx = width - padR + 20, ly0 = padT + 4, lh = 18;
+      var lTextEl = el("text", { x: lx, y: ly0 - 10, fill: "#e5e7eb", "font-size": 12, "font-weight": "700" });
+      lTextEl.textContent = "Legend";
+      legend.append(lTextEl);
+      const idx = MODE_ORDER.indexOf(mode);
+      const legendModes = MODE_ORDER.slice(idx).concat(MODE_ORDER.slice(0, idx)); // seçilen moddan başlayarak döndür
+      for (let i = 0; i < 7; i++) {
+        const deg = i + 1, note = scale[i], modName = legendModes[i];
+        const y = ly0 + (i + 1) * lh;
+        legend.append(el("rect", { x: lx, y: y - 10, width: 14, height: 14, fill: colors[note], "fill-opacity": 0.5, rx: 3, ry: 3 }));
+        var textel = el("text", { x: lx + 20, y: y, fill: "#e5e7eb", "font-size": 12 });
+        textel.textContent = `${deg}: ${note} (${modName})`;
+        legend.append(textel);
+      }
+
+
+      const stage = document.getElementById("stage");
+      stage.innerHTML = ""; stage.appendChild(svg);
     }
-  }
 
-  // fret numbers (bottom)
-  for(let f=fmin; f<=fmax; f++){
-    const tx=padL+(f-fmin+0.5)*cw;
-    var textEl = el("text",{x:tx,y:padT+STRINGS*ch+16,"text-anchor":"middle","font-size":11,fill:"#cbd5e1","font-weight":"600"});
-    textEl.textContent = f;
-    svg.append(textEl);
-  }
-
-  // inlays under numbers
-  const single=[3,5,7,9,15,17,19,21], doubles=[12,24];
-  const inlayY=padT+STRINGS*ch+30;
-  for(const fret of single){
-    if(fret<fmin||fret>fmax) continue;
-    const x=padL+(fret-fmin+0.5)*cw;
-    svg.append(el("circle",{cx:x,cy:inlayY,r:4,fill:"#94a3b8"}));
-  }
-  for(const fret of doubles){
-    if(fret<fmin||fret>fmax) continue;
-    const x=padL+(fret-fmin+0.5)*cw;
-    svg.append(el("circle",{cx:x,cy:inlayY-7,r:4,fill:"#cbd5e1"}));
-    svg.append(el("circle",{cx:x,cy:inlayY+7,r:4,fill:"#cbd5e1"}));
-  }
-
-  // string labels
-  for(let s=0;s<STRINGS;s++){
-    const ty=padT+s*ch+ch*0.6;
-    var textEl = el("text",{x:padL-10,y:ty,"text-anchor":"end","font-size":12,fill:"#cbd5e1","font-weight":"600"});
-    textEl.textContent = TUNING_VISUAL[s];
-    svg.append(textEl);
-  }
-
-  // title
-  svg.append(el("text",{x:padL,y:22,fill:"#e5e7eb","font-size":16,"font-weight":"700"}).textContent=
-    `${root} ${mode} — Frets ${fmin}–${fmax} + 3NPS (Start deg ${startDegree})`);
-
-  // LEGEND — seçilen moda göre ilgili mod adlarını göster
-  const legend=el("g",{}); svg.append(legend);
-  const lx=width-padR+20, ly0=padT+4, lh=18;
-  var lTextEl = el("text",{x:lx,y:ly0-10,fill:"#e5e7eb","font-size":12,"font-weight":"700"});
-  lTextEl.textContent = "Legend";
-  legend.append(lTextEl);
-  const idx=MODE_ORDER.indexOf(mode);
-  const legendModes=MODE_ORDER.slice(idx).concat(MODE_ORDER.slice(0,idx)); // seçilen moddan başlayarak döndür
-  for(let i=0;i<7;i++){
-    const deg=i+1, note=scale[i], modName=legendModes[i];
-    const y=ly0+(i+1)*lh;
-    legend.append(el("rect",{x:lx,y:y-10,width:14,height:14,fill:colors[note],"fill-opacity":0.5,rx:3,ry:3}));
-    var textel = el("text",{x:lx+20,y:y,fill:"#e5e7eb","font-size":12});
-    textel.textContent = `${deg}: ${note} (${modName})`;
-    legend.append(textel);
-  }
-
-
-  const stage=document.getElementById("stage");
-  stage.innerHTML=""; stage.appendChild(svg);
-}
-
-// ===== exports =====
-function downloadSVG(){
-  const svg=document.querySelector("#stage svg"); if(!svg) return;
-  const s=new XMLSerializer().serializeToString(svg);
-  const a=document.createElement("a"); a.href="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
-  const fileName = document.getElementById("root").value + "_" + document.getElementById("mode").value + "_Fretboard-3NPS.svg";
-  a.download=fileName; a.click();
-}
-function downloadPNG(){
-  const svg=document.querySelector("#stage svg"); if(!svg) return;
-  const s=new XMLSerializer().serializeToString(svg);
-  const url=URL.createObjectURL(new Blob([s],{type:"image/svg+xml"}));
-  const img=new Image();
-  img.onload=function(){
-    const c=document.createElement("canvas"); c.width=img.width*2; c.height=img.height*2;
-    const ctx=c.getContext("2d"); ctx.scale(2,2);
-    ctx.fillStyle="#0b1220"; ctx.fillRect(0,0,img.width,img.height); ctx.drawImage(img,0,0);
-    URL.revokeObjectURL(url);
-    const fileName = document.getElementById("root").value + "_" + document.getElementById("mode").value + "_Fretboard-3NPS.png";
-    c.toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=fileName; a.click(); }, "image/png");
-  };
-  img.src=url;
-}
+    // ===== exports =====
+    function downloadSVG() {
+      const svg = document.querySelector("#stage svg"); if (!svg) return;
+      const s = new XMLSerializer().serializeToString(svg);
+      const a = document.createElement("a"); a.href = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(s);
+      const fileName = document.getElementById("root").value + "_" + document.getElementById("mode").value + "_Fretboard-3NPS.svg";
+      a.download = fileName; a.click();
+    }
+    function downloadPNG() {
+      const svg = document.querySelector("#stage svg"); if (!svg) return;
+      const s = new XMLSerializer().serializeToString(svg);
+      const url = URL.createObjectURL(new Blob([s], { type: "image/svg+xml" }));
+      const img = new Image();
+      img.onload = function () {
+        const c = document.createElement("canvas"); c.width = img.width * 2; c.height = img.height * 2;
+        const ctx = c.getContext("2d"); ctx.scale(2, 2);
+        ctx.fillStyle = "#0b1220"; ctx.fillRect(0, 0, img.width, img.height); ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const fileName = document.getElementById("root").value + "_" + document.getElementById("mode").value + "_Fretboard-3NPS.png";
+        c.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = fileName; a.click(); }, "image/png");
+      };
+      img.src = url;
+    }
 
 
 
 
-// first paint
-render();
-</script>
+    // first paint
+    render();
+  </script>
 </body>
+
 </html>
