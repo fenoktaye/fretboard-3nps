@@ -223,6 +223,14 @@
           </select>
         </div>
       </label>
+      <label>Oryantasyon:
+        <div class="select-dropdown">
+          <select id="orientation">
+            <option value="right-handed" selected>Sağ</option>
+            <option value="left-handed">Sol</option>
+          </select>
+        </div>
+      </label>
     </div>
 
     <div class="stack">
@@ -297,6 +305,20 @@
 
     const selectedShapes = new Set();
 
+    // Helper function to get query string parameters
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    // Initialize orientation from query string or default to dropdown value
+    function initializeOrientation() {
+      const leftHandQS = getQueryParam('left-handed');
+      if (leftHandQS && (leftHandQS === 'true' || leftHandQS === '1')) {
+        document.getElementById('orientation').value = "left-handed";
+      }
+    }
+
     function render() {
       const FONT_STACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif';
       const root = document.getElementById("root").value;
@@ -306,6 +328,9 @@
       const fmin = Math.max(0, Math.min(24, +document.getElementById("fretMin").value || 0));
       const fmax = Math.max(fmin, Math.min(24, +document.getElementById("fretMax").value || 24));
       const octaves = +document.getElementById("octaves").value || 2;
+      
+      const orientation = document.getElementById("orientation").value || "right-handed";
+      const isLeftHanded = orientation === "left-handed";
 
       const scale = buildScale(root, INTERVALS[mode]);          // seçilen modun 7 notası
       const colors = degreeColorsForScale(scale);               // her nota için renk (dereceye göre)
@@ -327,7 +352,9 @@
       svg.appendChild(styleNode);
 
       svg.append(el("rect", { x: 0, y: 0, width, height, fill: "#0b1220" }));
-      const g = el("g", { transform: `translate(${padL},${padT})` }); svg.append(g);
+      const fretboardWidth = (fmax - fmin + 1) * cw;
+      const flipTransform = isLeftHanded ? `scale(-1,1) translate(-${fretboardWidth},0)` : '';
+      const g = el("g", { transform: `translate(${padL},${padT}) ${flipTransform}` }); svg.append(g);
 
       // grid
       for (let s = 0; s < STRINGS; s++) {
@@ -381,7 +408,9 @@
           if (scale.includes(n)) {
             const cx = (f - fmin + 0.5) * cw, cy = (s + 0.5) * ch;
             g.append(el("circle", { cx, cy, r: R, fill: colors[n] }));
-            const t = el("text", { x: cx, y: cy + fs * 0.35, "text-anchor": "middle", "font-size": fs, "font-weight": fw, fill: fc });
+            const textTransform = isLeftHanded ? 'scale(-1,1)' : '';
+            const transformOrigin = isLeftHanded ? `${cx} ${cy}` : '';
+            const t = el("text", { x: cx, y: cy + fs * 0.35, "text-anchor": "middle", "font-size": fs, "font-weight": fw, fill: fc, transform: textTransform, "transform-origin": transformOrigin });
             t.textContent = n; 
             g.append(t);
           }
@@ -402,7 +431,9 @@
               if (arpeggioSet.has(degree)) {
                 const cx = (f - fmin + 0.5) * cw - R + 2, cy = (s + 0.5) * ch + R - 2;
                 g.append(el("circle", { cx, cy, r: R2, fill: "#0b1220", stroke: colors[n], "stroke-width": "1.5" }));
-                const t = el("text", { x: cx, y: cy + fs * 0.35 * 0.8, "text-anchor": "middle", "font-size": fs * 0.8, "font-weight": fw, fill: colors[n] });
+                const textTransform = isLeftHanded ? 'scale(-1,1)' : '';
+                const transformOrigin = isLeftHanded ? `${cx} ${cy}` : '';
+                const t = el("text", { x: cx, y: cy + fs * 0.35 * 0.8, "text-anchor": "middle", "font-size": fs * 0.8, "font-weight": fw, fill: colors[n], transform: textTransform, "transform-origin": transformOrigin });
                 t.textContent = degree; 
                 g.append(t);
               }
@@ -413,7 +444,8 @@
 
       // fret numbers (bottom)
       for (let f = fmin; f <= fmax; f++) {
-        const tx = padL + (f - fmin + 0.5) * cw;
+        const baseX = (f - fmin + 0.5) * cw;
+        const tx = isLeftHanded ? padL + fretboardWidth - baseX : padL + baseX;
         var textEl = el("text", { x: tx, y: padT + STRINGS * ch + 16, "text-anchor": "middle", "font-size": 11, fill: "#cbd5e1", "font-weight": "600" });
         textEl.textContent = f;
         svg.append(textEl);
@@ -424,12 +456,14 @@
       const inlayY = padT + STRINGS * ch + 30;
       for (const fret of single) {
         if (fret < fmin || fret > fmax) continue;
-        const x = padL + (fret - fmin + 0.5) * cw;
+        const baseX = (fret - fmin + 0.5) * cw;
+        const x = isLeftHanded ? padL + fretboardWidth - baseX : padL + baseX;
         svg.append(el("circle", { cx: x, cy: inlayY, r: 4, fill: "#94a3b8" }));
       }
       for (const fret of doubles) {
         if (fret < fmin || fret > fmax) continue;
-        const x = padL + (fret - fmin + 0.5) * cw;
+        const baseX = (fret - fmin + 0.5) * cw;
+        const x = isLeftHanded ? padL + fretboardWidth - baseX : padL + baseX;
         svg.append(el("circle", { cx: x, cy: inlayY - 7, r: 4, fill: "#cbd5e1" }));
         svg.append(el("circle", { cx: x, cy: inlayY + 7, r: 4, fill: "#cbd5e1" }));
       }
@@ -443,8 +477,9 @@
       }
 
       // title
+      const orientationText = isLeftHanded ? ' (Sol Gitarist)' : '';
       svg.append(el("text", { x: padL, y: 22, fill: "#e5e7eb", "font-size": 16, "font-weight": "700" }).textContent =
-        `${root} ${mode} — Frets ${fmin}–${fmax} + 3NPS (Start deg ${startDegree})`);
+        `${root} ${mode} — Frets ${fmin}–${fmax} + 3NPS (Start deg ${startDegree})${orientationText}`);
 
       // LEGEND — seçilen moda göre ilgili mod adlarını göster
       const legend = el("g", {}); svg.append(legend);
@@ -494,6 +529,9 @@
 
 
 
+
+    // Initialize orientation from query string on page load
+    initializeOrientation();
 
     // first paint
     render();
